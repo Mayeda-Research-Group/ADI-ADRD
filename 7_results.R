@@ -244,7 +244,7 @@ ggplot() +
 
   ggsave(filename = paste0(path_to_box, "/Asian_Americans_dementia/", 
                          "Manuscripts/ADI_ADRD/Manuscript/figures/",
-                         "adi_stacked_barchart_asiansubgrp_nlw_color.jpg"), device = "jpg", 
+                         "adi_stacked_barchart_asiansubgrp_nlw_color_r1.jpg"), device = "jpg", 
        height = 8, width = 16, units = "in")
 
 
@@ -290,10 +290,10 @@ ggplot(data = adi_county15aa_analysis_boxplot,
 
 ggsave(filename = paste0(path_to_box, "/Asian_Americans_dementia/", 
                          "Manuscripts/ADI_ADRD/Manuscript/figures/",
-                         "asianalone_pct_asiansubgrp_nlw_raincloud_color.jpg"), device = "jpg", 
+                         "asianalone_pct_asiansubgrp_nlw_raincloud_color_r1.jpg"), device = "jpg", 
        height = 8, width = 15, units = "in")
 
-#---- Figure 2: HR plots ----
+#---- Figure 2 & 3 ----
 #---- **Reading in model output ----
 output_estims1 <- 
   read.xlsx(paste0(path_to_box, "/Asian_Americans_dementia/Manuscripts/", 
@@ -404,7 +404,7 @@ asianwhiteest$version <- ifelse(str_detect(asianwhiteest$names, "state"),1, 2)
 subset <- asianwhiteest
 title_index <- ifelse(subset$version==1,"state", "county")
 
-#---- **Cox model HRs (Asian vs NLW) ----
+#---- **Figure 2: Cox model HRs (Asian vs NLW) ----
 p<- ggplot(data = subset,
            aes(x = names_f, y = HR, ymin = LL, ymax = UL, 
                col = raceth_f, fill = raceth_f)) + 
@@ -435,11 +435,11 @@ p
 ggsave(p, filename = paste0(path_to_box, 
                             "/Asian_Americans_dementia/", 
                             "Manuscripts/ADI_ADRD/Manuscript/figures/",
-                            "coxph_hr_asian_white_state.jpg"), device = "jpg", 
+                            "coxph_hr_asian_white_state_r1.jpg"), device = "jpg", 
        height = 5, width = 7, units = "in")
 
 
-#---- **Cox model HRs (Asian subeths) log scale w arrows----
+#---- **Figure 3: Cox model HRs (Asian subeths) log scale w arrows----
 #---- **Dropping Quintiles 4 and 5 for Vietnamese ethnicity ----
 
 #- 11/29/2021: JF using CS's more efficient code -
@@ -497,11 +497,63 @@ ggplot(data = asiansubgrp_state,
 
 ggsave(filename = paste0(path_to_box, "/Asian_Americans_dementia/", 
                          "Manuscripts/ADI_ADRD/Manuscript/figures/",
-                         "hr_asian_subgrp_newm3_log_scale.jpeg"), 
+                         "hr_asian_subgrp_newm3_log_scale_r1.jpeg"), 
        device = "jpeg", 
        height = 8, width = 10, units = "in")
 
-#---- Figure 1S: Top quintile vs lowest quintile figures & Age as Timescale Figures ----
+#----R1 JF - Figure S1: Adding in model output for Asian-White nativity HR's----
+#----**Loading in Model Output----
+all_models <- 
+  read.xlsx(paste0(path_to_box, "/Asian_Americans_dementia/Manuscripts/", 
+                   "ADI_ADRD/Output/", 
+                   "quintilekind2000adi_coxph_nativity_m3.xlsx"))
+
+#----**Preparing labels----
+asianwhiteest <- all_models %>% filter(model == 'm3' &
+                                         (str_detect(names, "adi")))
+asianwhiteest$names_f <- factor(asianwhiteest$names,
+                                levels = c("quintile_kind2000adi_state2",
+                                           "quintile_kind2000adi_state3",
+                                           "quintile_kind2000adi_state4",
+                                           "quintile_kind2000adi_state5"),
+                                labels = c("2", "3", "4", "5"))
+asianwhiteest$raceth_f <- factor(
+  asianwhiteest$raceth, levels = c("white", "asian"),
+  labels = c("Non-Latino White", "Asian Americans"))
+#---- **Nativity Model 3 Asian vs NLW plot ----
+p<- ggplot(data = asianwhiteest,
+           aes(x = names_f, y = HR, ymin = LL, ymax = UL,
+               col = raceth_f, fill = raceth_f)) +
+  geom_pointrange(aes(col = raceth_f),
+                  position=position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin =LL, ymax = UL),
+                position = position_dodge(width = 0.5), width = 0.2, cex = 1) +
+  geom_hline(aes(fill = names_f), yintercept = 1, linetype = 2) +
+  #scale_y_continuous(limits = c(0.8, 1.2), breaks = scales::pretty_breaks(n = 5)) +
+  xlab('Neighborhood Disadvantage Quintile') +
+  ylab('Hazard Ratio') +
+  theme_bw() +
+  coord_cartesian(ylim = c(0.8, 1.3), expand = TRUE) +
+  scale_y_log10(breaks = c(0.8, 0.9, 1.0, 1.1, 1.2, 1.3),
+                limits = c(.775, 1.325))+
+  theme(legend.title = element_blank(),
+        legend.key = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.caption = element_text(hjust = 0),
+        text = element_text(size = 14),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        legend.text = element_text(size = 12)) +
+  scale_color_manual(values = c("#F8766D", "#525252"))
+#ggtitle(paste0("AA and NLW ADI quintile M3, relative to ", title_index))
+p
+ggsave(p, filename = paste0(path_to_box,
+                            "/Asian_Americans_dementia/",
+                            "Manuscripts/ADI_ADRD/Manuscript/",
+                            "figures/coxph_hr_nativity_asian_white_state_r1.jpg"),
+       height = 5, width = 7, units = "in")
+
+#---- Figure S2: Top quintile vs lowest quintile figures & Age as Timescale Figures ----
 #NOTE: Code cleaning for scripts for supplemental figures (Figs 1S and 2S) 
 #contain code that overwrites previous names. Must run new cleaning script
 #before creating figures, or else will use old references to previous estimates.
@@ -514,6 +566,7 @@ output_estims3 <-
 
 #Note: color palette same as before, but including in case only want to run 
 #this section
+
 cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", 
                "#525252")
 
@@ -572,9 +625,8 @@ ggplot(data = asianwhiteest_2080,
 ggsave(filename = paste0(path_to_box, 
                             "/Asian_Americans_dementia/", 
                             "Manuscripts/ADI_ADRD/Manuscript/figures/",
-                            "2080_hr_asian_white_state.jpg"), device = "jpg", 
+                            "2080_hr_asian_white_state_r1.jpg"), device = "jpg", 
        height = 5, width = 7, units = "in")
-
 
 #---- **Preparing Asian subgroup labels ----
 output_estims_m3_2080<-mutate(output_estims_m3_2080, bigfacet = ifelse(raceth == 'asian' |
@@ -608,6 +660,13 @@ output_estims_m3_2080$raceth_f<-
 cbPalette_new <- c("#F8766D", "#525252","#E69F00", "#56B4E9", "#009E73", 
                    "#F0E442", "#0072B2", "#D55E00")
 
+coordlimit<-4.0
+output_estims_m3_2080 <- output_estims_m3_2080 %>% mutate(
+  LL_1 = ifelse(LL < 0.25, .25, NA),
+  UL_1 = ifelse(UL > coordlimit, coordlimit, NA)) %>%
+  filter(!(raceth_f == "Vietnamese" & names %in% 
+             c("quintile_kind2000adi_state4", "quintile_kind2000adi_state5")))
+
 #---- **All NLW & Asian 20% v 80% HR Plot ----
 ggplot(data = output_estims_m3_2080,
        aes(x = raceth_f, y = HR, ymin = LL, ymax = UL, 
@@ -617,12 +676,27 @@ ggplot(data = output_estims_m3_2080,
   geom_errorbar(aes(ymin = LL, ymax = UL), 
                 position = position_dodge(width = 0.5), width = 0.2, cex = 1) +
   geom_hline(aes(fill = raceth_f), yintercept = 1, linetype = 2) +
+  
   #scale_y_continuous(limits = c(0.8, 1.2), breaks = scales::pretty_breaks(n = 5)) +
   xlab('Race/Ethnicity') + 
   ylab('Hazard Ratio') +
   theme_bw() +
-  scale_y_log10(breaks = c(0.25,.5, 1.0, 1.5, 2.0),
-                limits = c(0.2, 2.1))+
+  
+  # geom_segment(
+  #   aes(x = as.numeric(raceth_f)-.125, xend = as.numeric(raceth_f)-.125,
+  #       y = LL, yend = UL_1),
+  #   arrow = arrow(length = unit(.5, "cm")),
+  #   show.legend = FALSE,
+  #   size = 1) +
+  # geom_segment(
+  #   aes(x = as.numeric(raceth_f)-.125, xend = as.numeric(raceth_f)-.125,
+  #       y = UL, yend = LL_1),
+  #   arrow = arrow(length = unit(.5, "cm")),
+  #   show.legend = FALSE,
+  #   size = 1) +
+  #R1 JF: Increasing y-axis scale to 4.0
+  scale_y_log10(breaks = c(0.25,.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0),
+                limits = c(0.25, 4.0))+
   theme(legend.title = element_blank(), panel.grid.minor = element_blank(),
         plot.caption = element_text(hjust = 0),
         axis.text.x = element_text(angle = 30, hjust = 1)) + 
@@ -640,20 +714,20 @@ ggplot(data = output_estims_m3_2080,
 ggsave(filename = paste0(path_to_box, 
                          "/Asian_Americans_dementia/", 
                          "Manuscripts/ADI_ADRD/Manuscript/figures/",
-                         "2080_hr_all_raceeth_state.jpg"), device = "jpg", 
+                         "2080_hr_all_raceeth_state_r1.jpg"), device = "jpg", 
        height = 8, width = 10, units = "in")
 
-#---- Figure 2S: Age as Timescale HR's ----
+#---- Figure S3: Age as Timescale HR's ----
 #---- **preparing age as timescale data ----
-for (i in 1:length(output_estims4$raceth)){
+for (i in 1:length(output_estims3$raceth)){
   for (j in 1:length(racethlist)){
-    if(output_estims4$raceth[i] == racethlist[j]){
-      output_estims4$facetcnt[i] = j
+    if(output_estims3$raceth[i] == racethlist[j]){
+      output_estims3$facetcnt[i] = j
     }
   }
 }
 
-output_estims_m3_agetimescale <- output_estims4 %>% 
+output_estims_m3_agetimescale <- output_estims3 %>% 
   filter(model == 'age_m3' & (str_detect(names, "state")))
 
 rowstobind <- output_estims_m3_agetimescale %>%
@@ -823,7 +897,7 @@ ggplot(data = subset,
 ggsave(filename = paste0(path_to_box, 
                          "/Asian_Americans_dementia/", 
                          "Manuscripts/ADI_ADRD/Manuscript/figures/",
-                         "ageastimescale_hr_aa_nlw_state.jpg"), device = "jpg", 
+                         "ageastimescale_hr_aa_nlw_state_r1.jpg"), device = "jpg", 
        height = 5, width = 7, units = "in")
 
 #---- **Asian Asian subethnicities age as timescale ----
@@ -839,7 +913,7 @@ asiansubgrp_state <- asiansubgrp %>% filter(str_detect(asiansubgrp$names, "state
 
 coordlimit<-4.0
 asiansubgrp_state <- asiansubgrp_state %>% mutate(
-  LL_1 = ifelse(LL < 0.10, .10, NA),
+  LL_1 = ifelse(LL < 0.25, .25, NA),
   UL_1 = ifelse(UL > coordlimit, coordlimit, NA)) %>% 
   filter(!(raceth_f == "Vietnamese" & names %in% 
              c("quintile_kind2000adi_state4", "quintile_kind2000adi_state5")))
@@ -865,8 +939,8 @@ ggplot(data = asiansubgrp_state,
     arrow = arrow(length = unit(.5, "cm")),
     show.legend = FALSE,
     size = 1) +
-  scale_y_log10(breaks = c(0.10, 0.25,.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0),
-                limits = c(0.09, 4.0))+
+  scale_y_log10(breaks = c(0.25,.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0),
+                limits = c(0.25, 4.0))+
   facet_wrap(~ facet_cnt_f, labeller = label_parsed) + theme_bw() +
   xlab('Neighborhood Disadvantage Quintile') + ylab('Hazard Ratio') + 
   
@@ -882,6 +956,8 @@ ggplot(data = asiansubgrp_state,
 
 ggsave(filename = paste0(path_to_box, "/Asian_Americans_dementia/", 
                          "Manuscripts/ADI_ADRD/Manuscript/figures/",
-                         "ageastimescale_hr_asian_subgrp_log_scale.jpeg"), 
+                         "ageastimescale_hr_asian_subgrp_log_scale_r1.jpeg"), 
        device = "jpeg", 
        height = 8, width = 10, units = "in")
+
+
