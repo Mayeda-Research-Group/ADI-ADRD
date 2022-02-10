@@ -33,7 +33,7 @@ write.csv(adi_county15aa_tte, paste0(
 AA_ADRD_noimpute <- adi_county15aa_tte
 AA_ADRD_impute <- adi_county15aa_analysis
 table(adi_county15aa_tte$quintile_kind2000adi_state, exclude=NULL)
-table(adi_county15aa_analysis$quintile_kind2000adi_state, exclude = NULL)/5
+table(adi_county15aa_analysis$quintile_kind2000adi_state, exclude = NULL)/20
 
 #---- Cleaning Datsets ----
 #Pooling together the Asian ethnicities not used in subgroup analyses
@@ -55,26 +55,35 @@ table(AA_ADRD_impute$education_rev)
 colnames(AA_ADRD_noimpute)
 colnames(AA_ADRD_impute)
 
+#R1 JF: Added in sr_diabetes and sr_hyp (self-reported diabetes and 
+#       hypertension to list of variables kept in both imputed and unimputed
+#       datasets)
 keepvars<-c("subjid", "survey_age", "female", "asian", "ethnicity_new", 
             "income_pp", "education_rev", "usaborn_rev", "income", "sizeofhh",
             "usabornfather_rev", "usabornmother_rev", "maritalstatus", 
-            "generalhealth", "quintile_kind2000adi_county", 
-            "quintile_kind2000adi_state", "main_dem_v1_end_type", 
-            "main_dem_v1_fu_time", "ethnicity_rec", "education4", 
-            "pop_asianalone_pct")
+            "generalhealth", "quintile_kind2000adi_state", 
+            "main_dem_v1_end_type", "main_dem_v1_fu_time", "ethnicity_rec", 
+            "education4", "pop_asianalone_pct", "sr_diabetes", "sr_hyp")
+
+keepvars_1<-c("subjid", "survey_age", "female", "asian", "ethnicity_new", 
+            "income_pp", "education_rev", "usaborn_rev", "income", "sizeofhh",
+            "usabornfather_rev", "usabornmother_rev", "maritalstatus", 
+            "generalhealth", "quintile_kind2000adi_state", 
+            "main_dem_v1_end_type", "main_dem_v1_fu_time", "ethnicity_rec", 
+            "education4", "pop_asianalone_pct", "sr_diabetes", "sr_hyp", "imp")
 
 #Drop step - subsetting dataset to those selected values
 #Note: imputed dataset includes 1 additional variable, 'imp' that has the 
 #imputation number.
 AA_ADRD_noimpute <- AA_ADRD_noimpute %>% select(all_of(keepvars))
-AA_ADRD_impute <- AA_ADRD_impute %>% select(all_of(keepvars, "imp"))
-
+AA_ADRD_impute <- AA_ADRD_impute %>% dplyr::select(dplyr::all_of(keepvars_1))
 #making a list of categorical variables to run the loop over
+#R1 JF: Adding in sr_diabetes/hyp to categorical variable list for loop
 catvars <- c("female", "education_rev", "usaborn_rev", "income", "sizeofhh", 
-             "usabornfather_rev", "usabornmother_rev", "maritalstatus", 
-             "quintile_kind2000adi_county", "quintile_kind2000adi_state",
-             "generalhealth", "ethnicity_new", "main_dem_v1_end_type",
-             "education4", "ethnicity_rec")
+             "usabornfather_rev", "usabornmother_rev", "maritalstatus",  
+             "quintile_kind2000adi_state", "generalhealth", "ethnicity_new", 
+             "main_dem_v1_end_type", "education4", "ethnicity_rec", 
+             "sr_diabetes", "sr_hyp")
 
 #----Asian vs White Table 1, nonimputed dataset - Categorical Variables----
 #Get n's by Asian vs white ethnicity 
@@ -162,16 +171,17 @@ for (i in 1:length(contvars)){
 }
 T1results_cont<-data.frame(T1results_cont)
 
-
+#R1 JF: updating totals for imputed datasets to divide by 20 instead of 5
+#       due to increasing number of imputations from 5 --> 20
 #----Asian vs White Table 1, imputed datset - categorical ----
 #Getting values for the imputed dataset; there should be no missingness!
 T1results_cat_impute<-matrix(nrow=1, ncol=3) 
 T1results_cat_impute[1,]<- c("Race/ethnicity total",
-                             table(AA_ADRD_impute$asian, exclude = NULL)/5)
+                             table(AA_ADRD_impute$asian, exclude = NULL)/20)
 
 for (i in 1:length(catvars)){
   tab.to.add<-table(eval(parse_expr(paste0("AA_ADRD_impute$",catvars[i]))),
-                    AA_ADRD_impute$asian, exclude=NULL)/5
+                    AA_ADRD_impute$asian, exclude=NULL)/20
   labs<-paste(catvars[i],as.character(rownames(tab.to.add)))
   T1results_cat_impute<-rbind(T1results_cat_impute, c(paste(catvars[i]), rep(NA,2))) 
   T1results_cat_impute<-rbind(T1results_cat_impute,cbind(labs, tab.to.add))
@@ -215,9 +225,8 @@ T1results_cat_impute<-T1results_cat_impute[,c(
 #columns for each of them anyway
 catvars <- c("female", "education_rev", "usaborn_rev", "income", "sizeofhh", 
              "usabornfather_rev", "usabornmother_rev", "maritalstatus", 
-             "quintile_kind2000adi_county", "quintile_kind2000adi_state",
-             "generalhealth", "main_dem_v1_end_type",
-             "education4")
+             "quintile_kind2000adi_state", "generalhealth", 
+             "main_dem_v1_end_type", "education4", "sr_diabetes", "sr_hyp")
 
 #making a list of categorical variables to run the loop over
 
@@ -312,15 +321,16 @@ for (i in 1:length(contvars)){
 }
 T1results_cont_substr<-data.frame(T1results_cont_substr)
 
+#R1 JF: dividing totals for imputed dataset by 20 instead of 5 (see ln 174)
 #----Asian subgroups Table 1, imputed dataset - categorical----
 #Getting values for the imputed dataset; there should be no missingness!
 T1results_cat_impute_substr<-matrix(nrow=1, ncol=9) 
 T1results_cat_impute_substr[1,]<- c("Race/ethnicity total",
-                                    table(AA_ADRD_impute$ethnicity_rec, exclude = NULL)/5)
+                                    table(AA_ADRD_impute$ethnicity_rec, exclude = NULL)/20)
 
 for (i in 1:length(catvars)){
   tab.to.add<-table(eval(parse_expr(paste0("AA_ADRD_impute$",catvars[i]))),
-                    AA_ADRD_impute$ethnicity_rec, exclude=NULL)/5
+                    AA_ADRD_impute$ethnicity_rec, exclude=NULL)/20
   labs<-paste(catvars[i],as.character(rownames(tab.to.add)))
   T1results_cat_impute_substr<-rbind(T1results_cat_impute_substr, c(paste(catvars[i]), rep(NA,8))) 
   T1results_cat_impute_substr<-rbind(T1results_cat_impute_substr,cbind(labs, tab.to.add))
@@ -437,7 +447,7 @@ t1_res<-list(catvars=T1results_cat,
              catvars_impute_substr = T1results_cat_impute_substr,
              contvars_impute_all = cont_results)
 
-write.xlsx(t1_res, file = "C:/Users/j_fong/Box/Asian_Americans_dementia/Manuscripts/ADI_ADRD/Output/Table1/Table1_raw_21102021.xlsx")
+write.xlsx(t1_res, file = "C:/Users/j_fong/Box/Asian_Americans_dementia/Manuscripts/ADI_ADRD/Output/Table1/Table1_raw_31012022.xlsx")
 
 asianzz<-adi_county15aa_tte%>%filter(asian==1)
 table(asianzz$decadi_v5_1_new)
@@ -487,8 +497,3 @@ dem_fu<-list(unstrat_end_age = adi_end_age_unstrat,
              strat_end_fu = adi_dem_strat)
 
 write.xlsx(dem_fu, file = "C:/Users/j_fong/Box/Asian_Americans_dementia/Manuscripts/ADI_ADRD/Output/adi_results_descriptive_stats.xlsx")
-
-
-
-
-
