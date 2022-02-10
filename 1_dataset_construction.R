@@ -19,9 +19,6 @@ census2000 <-
   read_sas(paste0(path_to_box, "/Asian_Americans_dementia_data/", 
           "raw_data_tables/Census_data/c10049_cen2000_w_adi20211008.sas7bdat"))
 
-load(file = paste0("C:/Users/tmobley/Box/Asian_Americans_dementia_data/",
-                   "adi_adrd/analysis_data/county17_filtered.R"))
-
 colnames(time_to_event) <- tolower(colnames(time_to_event))
 colnames(census2000) <- tolower(colnames(census2000))
 
@@ -176,6 +173,15 @@ adi_tte_merge$countyid_masked <-
 
 table(adi_tte_merge$countyid_masked, exclude = NULL)
 
+#R1 TMM create block group ID var to report # block groups in sample
+adi_tte_merge$blkgroupid_masked <- 
+  ifelse(!is.na(adi_tte_merge$blkgroupcode_masked),
+         paste0(adi_tte_merge$statecode_char,
+                adi_tte_merge$countycode_masked,
+                adi_tte_merge$tractcode_masked,
+                adi_tte_merge$blkgroupcode_masked,
+                sep = "", collapse = NULL), NA)
+
 #---- Subset dataset to no missing adi block group measures ----
 
 #1. Remove PIs from sample --- from 184,929
@@ -186,12 +192,12 @@ adi_tte_merge %<>% filter(ethnicity_rev %in% c(1, 2, 3, 4, 5, 6, 7, 9, 10, NA))
 table(adi_tte_merge$ethnicity_rev, adi_tte_merge$asian, exclude=NULL)
 
 #2. Subset to main dem v1 sample --- from 184,492
-table(adi_tte_merge$main_dem_v1_sample, exclude = NULL) #4443 
+table(adi_tte_merge$main_dem_v1_sample, exclude = NULL) #4524 -- now incl 0 fu time
 
 adi_tte_maindem1 <- adi_tte_merge %>% filter(main_dem_v1_sample == 1)
 
-#3. No missing adi --- from 180049
-table(adi_tte_maindem1$kind_2000adi_staternk, exclude=NULL) #8617
+#3. No missing adi --- from 179,968
+table(adi_tte_maindem1$kind_2000adi_staternk, exclude=NULL) #8614
 
 adi_tte_maindem1 %<>% filter(!is.na(kind_2000adi_staternk)) 
 
@@ -200,171 +206,100 @@ table(adi_tte_maindem1$kind_2000adi_staternk, exclude = NULL)
   #double check countyid
   table(adi_tte_maindem1$countyid_masked, exclude = NULL)
  
-#-- analytic sample should be n=171,432  
-
-#---- Create data subset >=15 AA per county ----
-
-asian_tte_maindem1 <- adi_tte_maindem1 %>% filter(asian == 1)
-
-asian_county_n <- asian_tte_maindem1 %>%  
-  group_by(countyid_masked) %>% tally(sort = TRUE) %>% print(n = 60) 
-
-# >= 15 people/county subsamples 
-asian_county15aa <- asian_county_n %>% filter(n >= 15)
-
-#merge
-adi_county15aa_tte <- adi_tte_maindem1 %>%
-  filter(countyid_masked %in% c(asian_county15aa$countyid_masked)) %>% 
-  droplevels()
-
-n <- nrow(adi_county15aa_tte %>% filter(asian == 1)) #18167 to 18110
-n <- nrow(adi_county15aa_tte %>% filter(asian == 0)) #150485 to 149449
-
-#numbers in counties
-adi_county15aa_tte %>% filter(asian == 1) %>% 
-  group_by(countyid_masked) %>% tally(sort = TRUE) %>% print(n = 35)
-adi_county15aa_tte %>% filter(asian == 0) %>% 
-  group_by(countyid_masked) %>% tally(sort = TRUE) %>% print(n = 35)
-
-#numbers in adi state deciles
-adi_county15aa_tte %>% filter(asian == 1) %>%
-  group_by(kind_2000adi_staternk) %>% tally()
-adi_county15aa_tte %>% filter(asian == 0) %>%
-  group_by(kind_2000adi_staternk) %>% tally()
-
-#---- group counties according to Paola's email ----
-
-  table(adi_county15aa_tte$countyid_masked)
-
-adi_county15aa_tte$countyid_collapse <- 
-  ifelse(adi_county15aa_tte$countyid_masked %in%
-           c('06042','06299','06499','06818','06865'),1,
-    ifelse(adi_county15aa_tte$countyid_masked %in%
-        c('06064','06067','06296','06520','06573','06694','06878','06974'),2,
-      ifelse(adi_county15aa_tte$countyid_masked=='06004',3,
-         ifelse(adi_county15aa_tte$countyid_masked=='06673',4,
-            ifelse(adi_county15aa_tte$countyid_masked=='06708',5,
-               ifelse(adi_county15aa_tte$countyid_masked=='06720',6,NA))))))
-  
-  table(adi_county15aa_tte$countyid_collapse,exclude=NULL)
-  table(adi_county15aa_tte$countyid_masked,adi_county15aa_tte$countyid_collapse,
-        exclude=NULL)
-
+#-- analytic sample should be n=171,354  
 
 #---- Asian immigrant enclave vars ----
-adi_county15aa_tte %>% summarize(min_pct = min(pop_foreignborn_pct), 
+  adi_tte_maindem1 %>% summarize(min_pct = min(pop_foreignborn_pct), 
                                  max_pct = max(pop_foreignborn_pct), 
                                  avg_pct = mean(pop_foreignborn_pct))
 
-adi_county15aa_tte %>% summarize(min_pct = min(pop_asianalone_pct), 
+  adi_tte_maindem1 %>% summarize(min_pct = min(pop_asianalone_pct), 
                                   max_pct = max(pop_asianalone_pct), 
                                   avg_pct = mean(pop_asianalone_pct))
   
-adi_county15aa_tte = mutate(adi_county15aa_tte, 
+  adi_tte_maindem1 = mutate(adi_tte_maindem1, 
                             pop_foreignborn_sample = 
-                            ntile(adi_county15aa_tte$pop_foreignborn_pct, 100),
+                            ntile(adi_tte_maindem1$pop_foreignborn_pct, 100),
                             pop_asianalone_sample = 
-                              ntile(adi_county15aa_tte$pop_asianalone_pct, 100))
+                              ntile(adi_tte_maindem1$pop_asianalone_pct, 100))
   
-adi_county15aa_tte %<>% 
+  adi_tte_maindem1 %<>% 
   mutate("pop_foreignborn_clean" = 
-           (((adi_county15aa_tte$pop_foreignborn_pct*100) - 
-               mean((adi_county15aa_tte$pop_foreignborn_pct*100)))/10),
+           (((adi_tte_maindem1$pop_foreignborn_pct*100) - 
+               mean((adi_tte_maindem1$pop_foreignborn_pct*100)))/10),
         "pop_foreignborn_clean_s" = ((pop_foreignborn_sample - 50)/10),
         "pop_asianalone_clean" = 
-          (((adi_county15aa_tte$pop_asianalone_pct*100) - 
-              mean((adi_county15aa_tte$pop_asianalone_pct*100)))/10),
+          (((adi_tte_maindem1$pop_asianalone_pct*100) - 
+              mean((adi_tte_maindem1$pop_asianalone_pct*100)))/10),
         "pop_asianalone_clean_s" = ((pop_asianalone_sample - 50)/10))
 
-  # summary(adi_county15aa_tte$pop_foreignborn_sample)
-  # summary(adi_county15aa_tte$pop_foreignborn_clean_s)
-  # summary(adi_county15aa_tte$pop_foreignborn_pct)
-  # summary(adi_county15aa_tte$pop_foreignborn_clean)
+  # summary(adi_tte_maindem1$pop_foreignborn_sample)
+  # summary(adi_tte_maindem1$pop_foreignborn_clean_s)
+  # summary(adi_tte_maindem1$pop_foreignborn_pct)
+  # summary(adi_tte_maindem1$pop_foreignborn_clean)
   # 
-  # summary(adi_county15aa_tte$pop_asianalone_sample)
-  # summary(adi_county15aa_tte$pop_asianalone_clean_s)
-  # summary(adi_county15aa_tte$pop_asianalone_pct)
-  # summary(adi_county15aa_tte$pop_asianalone_clean)
+  # summary(adi_tte_maindem1$pop_asianalone_sample)
+  # summary(adi_tte_maindem1$pop_asianalone_clean_s)
+  # summary(adi_tte_maindem1$pop_asianalone_pct)
+  # summary(adi_tte_maindem1$pop_asianalone_clean)
 
-#---- Vars rescaled to 17 counties in analytic sample ----
-county17_filtered %<>% select(blkgroupdensity_mi2, decile_kind2000adi_county,
-                              quintile_kind2000adi_county)
-
-adi_county15aa_merge <- merge(x=adi_county15aa_tte, y=county17_filtered,
-                            by='blkgroupdensity_mi2')
-
-  table(adi_county15aa_merge$decile_kind2000adi_county, exclude=NULL)
-  table(adi_county15aa_merge$quintile_kind2000adi_county,
-        adi_county15aa_merge$kind_2000adi_natrank,exclude=NULL)
-  table(adi_county15aa_merge$quintile_kind2000adi_state,
-        adi_county15aa_merge$kind_2000adi_natrank,exclude=NULL)
-  
-  table(adi_county15aa_merge$kind_2000adi_staternk,
-        adi_county15aa_merge$kind_2000adi_natrank,exclude=NULL)
-  
-  summary(adi_county15aa_merge$pop_asianalone_pct)
-  hist(adi_county15aa_merge$pop_asianalone_pct)
-  
-    
 #---- Clean variables for analysis ----
 
-adi_county15aa_tte<-adi_county15aa_merge
-
 #Center/rescale block group density
-summary(adi_county15aa_tte$blkgroupdensity_mi2, exclude = NULL)
-adi_county15aa_tte$bgdensity_clean <- 
-  (adi_county15aa_tte$blkgroupdensity_mi2 - 
-     round(mean(adi_county15aa_tte$blkgroupdensity_mi2, na.rm = TRUE)))/1000
+summary(adi_tte_maindem1$blkgroupdensity_mi2, exclude = NULL)
+adi_tte_maindem1$bgdensity_clean <- 
+  (adi_tte_maindem1$blkgroupdensity_mi2 - 
+     round(mean(adi_tte_maindem1$blkgroupdensity_mi2, na.rm = TRUE)))/1000
 
 #Flag for end of follow up = dementia (to use in surv analysis)
-adi_county15aa_tte$dem_end_flag <- 
-  ifelse(adi_county15aa_tte$main_dem_v1_end_type == 'DEMENTIA', 1, 0)
+adi_tte_maindem1$dem_end_flag <- 
+  ifelse(adi_tte_maindem1$main_dem_v1_end_type == 'DEMENTIA', 1, 0)
 
 #confirmed dem end flag variables are equivalent 
-table(adi_county15aa_tte$main_dem_v1_end_dem_flag, 
-      adi_county15aa_tte$dem_end_flag, exclude = NULL)
+table(adi_tte_maindem1$main_dem_v1_end_dem_flag, 
+      adi_tte_maindem1$dem_end_flag, exclude = NULL)
 
 #Collapse employment indicators for MI
-table(adi_county15aa_tte$employment_part_time_employed, 
-      adi_county15aa_tte$employment_full_time_employed, exclude = NULL)
+table(adi_tte_maindem1$employment_part_time_employed, 
+      adi_tte_maindem1$employment_full_time_employed, exclude = NULL)
 
-adi_county15aa_tte$full_part_employment <- 
-  ifelse(adi_county15aa_tte$employment_full_time_employed == 1 | 
-           adi_county15aa_tte$employment_part_time_employed == 1, 1, 0)
+adi_tte_maindem1$full_part_employment <- 
+  ifelse(adi_tte_maindem1$employment_full_time_employed == 1 | 
+           adi_tte_maindem1$employment_part_time_employed == 1, 1, 0)
 
-table(adi_county15aa_tte$full_part_employment, exclude = NULL)
+table(adi_tte_maindem1$full_part_employment, exclude = NULL)
 
 #create ethnicity var with "Asian, unspecified" category and collapse white
-adi_county15aa_tte$ethnicity_new <-
-  ifelse(!is.na(adi_county15aa_tte$ethnicity_rev), 
-         adi_county15aa_tte$ethnicity_rev,
-         ifelse(is.na(adi_county15aa_tte$ethnicity_rev) & 
-                  adi_county15aa_tte$asian == 0, 9,
-                ifelse(is.na(adi_county15aa_tte$ethnicity_rev) &
-                         adi_county15aa_tte$asian == 1, 11, NA)))
+adi_tte_maindem1$ethnicity_new <-
+  ifelse(!is.na(adi_tte_maindem1$ethnicity_rev), 
+         adi_tte_maindem1$ethnicity_rev,
+         ifelse(is.na(adi_tte_maindem1$ethnicity_rev) & 
+                  adi_tte_maindem1$asian == 0, 9,
+                ifelse(is.na(adi_tte_maindem1$ethnicity_rev) &
+                         adi_tte_maindem1$asian == 1, 11, NA)))
 
 #check
-table(adi_county15aa_tte$ethnicity_new, exclude = NULL)
+table(adi_tte_maindem1$ethnicity_new, exclude = NULL)
 
-#create education4 variable for Table 1 (note, we will write over this after MI)
-table(adi_county15aa_tte$education_rev, exclude=NULL)
+#create education4 variable for Table 1
+table(adi_tte_maindem1$education_rev, exclude=NULL)
 
-adi_county15aa_tte$education4 <- 
-  as.factor(ifelse(adi_county15aa_tte$education_rev %in% c(1, 2), 1,
-                ifelse(adi_county15aa_tte$education_rev == 3, 2, 
-                    ifelse(adi_county15aa_tte$education_rev == 4, 3, 
-                         ifelse(adi_county15aa_tte$education_rev %in% c(5,6),4,
+adi_tte_maindem1$education4 <- 
+  as.factor(ifelse(adi_tte_maindem1$education_rev %in% c(1, 2), 1,
+                ifelse(adi_tte_maindem1$education_rev == 3, 2, 
+                    ifelse(adi_tte_maindem1$education_rev == 4, 3, 
+                         ifelse(adi_tte_maindem1$education_rev %in% c(5,6),4,
                                 NA)))))
-table(adi_county15aa_tte$education_rev, adi_county15aa_tte$education4, 
+table(adi_tte_maindem1$education_rev, adi_tte_maindem1$education4, 
       useNA = "ifany")
 
 #numbers in adi state deciles
-adi_county15aa_tte %>% filter(asian == 1) %>%
+adi_tte_maindem1 %>% filter(asian == 1) %>%
   group_by(kind_2000adi_staternk) %>% tally()
-adi_county15aa_tte %>% filter(asian == 0) %>%
+adi_tte_maindem1 %>% filter(asian == 0) %>%
   group_by(kind_2000adi_staternk) %>% tally()
 
-adi_county15aa_tte %<>% 
+adi_tte_maindem1 %<>% 
   mutate("ethnicity" = case_when(ethnicity_new == 1 ~ "South Asian", 
                                  ethnicity_new == 2 ~ "Chinese", 
                                  ethnicity_new == 3 ~ "Japanese", 
@@ -378,25 +313,80 @@ adi_county15aa_tte %<>%
                                  ethnicity_new == 11 ~ "Asian, unspecified"))
 
 #- check number of dem outcomes by group 
-
-# ns <-adi_county15aa_tte %>% 
+# 
+# ns <-adi_tte_maindem1 %>%
 #   group_by(ethnicity, quintile_kind2000adi_state, dem_end_flag) %>% tally()
-# #view(ns)
+# view(ns)
 # 
-# ns2<-adi_county15aa_tte %>% 
-#   group_by(ethnicity, quintile_kind2000adi_county, dem_end_flag) %>% tally()
-# #view(ns2)
-# 
-# ns3 <-adi_county15aa_tte %>% 
+# ns3 <-adi_tte_maindem1 %>%
 #   group_by(ethnicity, quartile_kind2000adi_nat, dem_end_flag) %>% tally()
 # view(ns3)
 # 
-# ns4 <-adi_county15aa_tte %>% 
+# ns4 <-adi_tte_maindem1 %>%
 #   group_by(ethnicity, quintile_kind2000adi_nat, dem_end_flag) %>% tally()
 # view(ns4)
 
+#---- Create data subset >=15 AA per county ----
 
-#---- save dataframe ----
+adi_asian_filter <- adi_tte_maindem1 %>% filter(asian == 1)
+
+asian_county_n <- adi_asian_filter %>%  
+  group_by(countyid_masked) %>% tally(sort = TRUE) %>% print(n = 60) 
+
+# >= 15 people/county subsamples 
+asian_county15aa <- asian_county_n %>% filter(n >= 15)
+
+#merge
+adi_county15aa_tte <- adi_tte_maindem1 %>%
+  filter(countyid_masked %in% c(asian_county15aa$countyid_masked)) %>% 
+  droplevels()
+
+# n <- nrow(adi_tte_maindem1 %>% filter(asian == 1)) #18177
+# n <- nrow(adi_tte_maindem1 %>% filter(asian == 0)) #153177
+# n <- nrow(adi_county15aa_tte %>% filter(asian == 1)) #18103
+# n <- nrow(adi_county15aa_tte %>% filter(asian == 0)) #149385
+
+#numbers in counties
+# adi_county15aa_tte %>% filter(asian == 1) %>% 
+#   group_by(countyid_masked) %>% tally(sort = TRUE) %>% print(n = 35)
+# adi_county15aa_tte %>% filter(asian == 0) %>% 
+#   group_by(countyid_masked) %>% tally(sort = TRUE) %>% print(n = 35)
+# 
+# #numbers in adi state deciles
+# adi_county15aa_tte %>% filter(asian == 1) %>%
+#   group_by(kind_2000adi_staternk) %>% tally()
+# adi_county15aa_tte %>% filter(asian == 0) %>%
+#   group_by(kind_2000adi_staternk) %>% tally()
+
+#---- group counties according to Paola's email ----
+
+table(adi_county15aa_tte$countyid_masked)
+
+adi_county15aa_tte$countyid_collapse <- 
+  ifelse(adi_county15aa_tte$countyid_masked %in% 
+           c('06042','06299','06499','06818','06865'),1,
+         ifelse(adi_county15aa_tte$countyid_masked %in% 
+                  c('06064','06067','06296','06520','06573','06694','06878','06974'),2,
+                ifelse(adi_county15aa_tte$countyid_masked=='06004',3,
+                       ifelse(adi_county15aa_tte$countyid_masked=='06673',4,
+                              ifelse(adi_county15aa_tte$countyid_masked=='06708',5,
+                                     ifelse(adi_county15aa_tte$countyid_masked=='06720',
+                                            6,NA))))))
+
+table(adi_county15aa_tte$countyid_collapse,exclude=NULL)
+table(adi_county15aa_tte$countyid_masked,
+      adi_county15aa_tte$countyid_collapse,exclude=NULL)
+
+#---- R1 TMM Number of block groups in sample ----
+
+length(unique(adi_county15aa_tte$blkgroupid_masked))
+
+#---- save dataframes ----
+#- R1 TMM save dataframe without 15 AA/county restriction for all county sa
+save(adi_tte_maindem1, 
+     file = paste0(path_to_box, "/Asian_Americans_dementia_data/adi_adrd/", 
+                   "analysis_data/adi_tte_maindem1.R"))
+
 save(adi_county15aa_tte, 
      file = paste0(path_to_box, "/Asian_Americans_dementia_data/adi_adrd/", 
                    "analysis_data/adi_county15aa_tte.R"))
