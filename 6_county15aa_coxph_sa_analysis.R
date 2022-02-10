@@ -90,8 +90,9 @@ model_matrix <-
                     "pop_asianalone_clean + ",
                     "pop_asianalone_clean*quintile_kind2000adi_state"))))
 
-#for(grepl("m3", model)){
-for(model in unique(model_matrix$model_name)){
+#R1 TMM only running on M3
+for(model in c("m3", "age_m3")){
+#for(model in unique(model_matrix$model_name)){
   formula <- unlist(model_matrix[which(model_matrix$model_name == model), 
                                  "model"])
   
@@ -140,11 +141,13 @@ for(model in unique(model_matrix$model_name)){
           
           if(grepl("age", model)){
             subeth_models_list[[i]] <- 
-              coxph(as.formula(formula), data = subset, id = subjid, 
+              #R1 TMM change to data = imp_subset, previously data=subset
+              coxph(as.formula(formula), data = imp_subset, id = subjid, 
                     robust=TRUE)
           }else{
             subeth_models_list[[i]] <- 
-              coxph(as.formula(formula), data = subset, robust=TRUE)
+              #R1 TMM change to data = imp_subset, previously data=subset
+              coxph(as.formula(formula), data = imp_subset, robust=TRUE)
           }
         }
         
