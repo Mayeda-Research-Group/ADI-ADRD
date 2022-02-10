@@ -382,10 +382,6 @@ table(adi_county15aa_tte$countyid_masked,
 length(unique(adi_county15aa_tte$blkgroupid_masked))
 
 #---- save dataframes ----
-#- R1 TMM save dataframe without 15 AA/county restriction for all county sa
-save(adi_tte_maindem1, 
-     file = paste0(path_to_box, "/Asian_Americans_dementia_data/adi_adrd/", 
-                   "analysis_data/adi_tte_maindem1.R"))
 
 save(adi_county15aa_tte, 
      file = paste0(path_to_box, "/Asian_Americans_dementia_data/adi_adrd/", 
