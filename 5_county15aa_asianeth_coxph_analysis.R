@@ -23,7 +23,7 @@ load(paste0(path_to_box,
             "adi_county15aa_analysis.R"))
 
 adi_county15aa_analysis$education4 = 
-  relevel(adi_county15aa_analysis$education4, ref = "4") 
+  relevel(factor(adi_county15aa_analysis$education4, ordered=F), ref = "4") 
 adi_county15aa_analysis$quintile_kind2000adi_state <- 
   relevel(factor(adi_county15aa_analysis$quintile_kind2000adi_state, 
                  ordered=FALSE), ref = '1')
@@ -31,6 +31,8 @@ adi_county15aa_analysis$quintile_kind2000adi_state <-
 #Sanity check
 levels(adi_county15aa_analysis$education4)
 levels(adi_county15aa_analysis$quintile_kind2000adi_state)
+summary(adi_county15aa_analysis$pop_asianalone_clean)
+summary(adi_county15aa_analysis$bgdensity_clean)
 
 #---- Save LRT results ----
 LRT_results <- tibble("raceth" = rep(c("Chinese", "Filipino", "Japanese",
@@ -131,8 +133,10 @@ for(model in unique(model_matrix$model_name)){
                    "pop_asianalone_clean")
         }
         
-        for(i in 1:max(dataset$imp)){
-          subset <- dataset %>% filter(imp == i)
+        #R1 TMM changing dataset$imp to subset$imp (this shouldn't change anything)
+        for(i in 1:max(subset$imp)){
+          #R1 TMM changing subset <- dataset to imp_subset <- subset
+          imp_subset <- subset %>% filter(imp == i)
           
           reduced_model_list[[i]] <-
             coxph(as.formula(new_formula), data = imp_subset, robust=TRUE)
